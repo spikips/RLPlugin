@@ -1,0 +1,3 @@
+package net.runelite.client.plugins.itemidcheck
+
+rootProject.name = 'ItemIdCheckerPlugin'
