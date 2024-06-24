@@ -5,50 +5,45 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 @ConfigGroup("itemidcheck")
-public interface ItemIdCheckConfig extends Config {
-
+public interface ItemIdCheckConfig extends Config
+{
     @ConfigItem(
-            keyName = "fontSize",
-            name = "Font Size",
-            description = "Configures the font size of the text overlay"
+            keyName = "showInventoryIds",
+            name = "Show Inventory IDs",
+            description = "Configures whether inventory item IDs are displayed"
     )
-    default int fontSize() {
-        return 12;
+    default boolean showInventoryIds()
+    {
+        return true;
     }
 
     @ConfigItem(
-            keyName = "fontStyle",
-            name = "Font Style",
-            description = "Configures the font style of the text overlay (PLAIN, BOLD, ITALIC)"
+            keyName = "showObjectIds",
+            name = "Show Object IDs",
+            description = "Configures whether game object IDs are displayed"
     )
-    default String fontStyle() {
-        return "PLAIN";
+    default boolean showObjectIds()
+    {
+        return true;
     }
 
     @ConfigItem(
-            keyName = "fontType",
-            name = "Font Type",
-            description = "Configures the font type of the text overlay"
+            keyName = "showCurrentPlaneTileLocations",
+            name = "Show Current Plane Tile Locations",
+            description = "Configures whether tile locations on the current plane are displayed"
     )
-    default String fontType() {
-        return "Arial";
+    default boolean showCurrentPlaneTileLocations()
+    {
+        return true;
     }
 
     @ConfigItem(
-            keyName = "enableGameObjectIds",
-            name = "Enable Game Object IDs",
-            description = "Toggle displaying IDs of game objects around the world"
+            keyName = "showAllPlaneTileLocations",
+            name = "Show All Plane Tile Locations",
+            description = "Configures whether tile locations on all planes are displayed"
     )
-    default boolean enableGameObjectIds() {
+    default boolean showAllPlaneTileLocations()
+    {
         return false;
-    }
-
-    @ConfigItem(
-            keyName = "showTileLocations",
-            name = "Show Tile Locations",
-            description = "Toggle displaying tile locations (NONE, CURRENT_PLANE, ALL_PLANES)"
-    )
-    default TileDisplayOption showTileLocations() {
-        return TileDisplayOption.NONE;
     }
 }

@@ -1,194 +1,142 @@
 package net.runelite.client.plugins.itemidcheck;
 
-import net.runelite.api.Client;
-import net.runelite.api.GameObject;
-import net.runelite.api.Point;
-import net.runelite.api.Tile;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.OverlayUtil;
-import net.runelite.api.Perspective;
 
 import javax.inject.Inject;
 import java.awt.*;
+import java.util.List;
 
-public class ItemIdCheckOverlay extends Overlay {
-
-    private static final int INVENTORY_WIDGET_ID = WidgetInfo.INVENTORY.getId();
-
+public class ItemIdCheckOverlay extends Overlay
+{
     private final Client client;
     private final ItemIdCheckConfig config;
 
     @Inject
-    public ItemIdCheckOverlay(Client client, ItemIdCheckConfig config) {
+    public ItemIdCheckOverlay(Client client, ItemIdCheckConfig config)
+    {
         this.client = client;
         this.config = config;
         setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.ABOVE_WIDGETS);
-        setPriority(OverlayPriority.MED);
+        setLayer(OverlayLayer.ABOVE_SCENE);
     }
 
     @Override
-    public Dimension render(Graphics2D graphics) {
-        renderInventoryItems(graphics);
-        if (config.enableGameObjectIds()) {
-            renderGameObjects(graphics);
+    public Dimension render(Graphics2D graphics)
+    {
+        if (config.showInventoryIds())
+        {
+            Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY.getGroupId(), WidgetInfo.INVENTORY.getChildId());
+            if (inventoryWidget != null)
+            {
+                List<WidgetItem> inventoryItems = inventoryWidget.getWidgetItems();
+                for (WidgetItem item : inventoryItems)
+                {
+                    String text = String.valueOf(item.getId());
+                    net.runelite.api.Point location = item.getCanvasLocation();
+                    OverlayUtil.renderTextLocation(graphics, location, text, Color.WHITE);
+                }
+            }
         }
-        if (config.showTileLocations() != TileDisplayOption.NONE) {
-            renderTileLocations(graphics);
+
+        if (config.showObjectIds())
+        {
+            Tile[][][] tiles = client.getScene().getTiles();
+            int plane = client.getPlane();
+            for (Tile[] tileArray : tiles[plane])
+            {
+                if (tileArray == null) continue;
+
+                for (Tile tile : tileArray)
+                {
+                    if (tile == null) continue;
+
+                    for (GameObject object : tile.getGameObjects())
+                    {
+                        if (object != null)
+                        {
+                            renderObjectId(graphics, object);
+                        }
+                    }
+
+                    WallObject wallObject = tile.getWallObject();
+                    if (wallObject != null)
+                    {
+                        renderObjectId(graphics, wallObject);
+                    }
+
+                    DecorativeObject decoObject = tile.getDecorativeObject();
+                    if (decoObject != null)
+                    {
+                        renderObjectId(graphics, decoObject);
+                    }
+
+                    GroundObject groundObject = tile.getGroundObject();
+                    if (groundObject != null)
+                    {
+                        renderObjectId(graphics, groundObject);
+                    }
+                }
+            }
         }
+
+        if (config.showCurrentPlaneTileLocations() || config.showAllPlaneTileLocations())
+        {
+            Tile[][][] tiles = client.getScene().getTiles();
+            for (int p = 0; p < tiles.length; p++)
+            {
+                if (!config.showAllPlaneTileLocations() && p != client.getPlane())
+                {
+                    continue;
+                }
+
+                for (Tile[] tileArray : tiles[p])
+                {
+                    if (tileArray == null) continue;
+
+                    for (Tile tile : tileArray)
+                    {
+                        if (tile != null)
+                        {
+                            renderTileLocation(graphics, tile);
+                        }
+                    }
+                }
+            }
+        }
+
         return null;
     }
 
-    private void renderInventoryItems(Graphics2D graphics) {
-        Widget inventoryWidget = client.getWidget(INVENTORY_WIDGET_ID);
-
-        if (inventoryWidget == null || inventoryWidget.isHidden()) {
-            return;
-        }
-
-        // Retrieve font configuration
-        int fontSize = config.fontSize();
-        String fontStyleString = config.fontStyle();
-        String fontType = config.fontType();
-
-        int fontStyle;
-        switch (fontStyleString.toUpperCase()) {
-            case "BOLD":
-                fontStyle = Font.BOLD;
-                break;
-            case "ITALIC":
-                fontStyle = Font.ITALIC;
-                break;
-            case "PLAIN":
-            default:
-                fontStyle = Font.PLAIN;
-                break;
-        }
-
-        Font font = new Font(fontType, fontStyle, fontSize);
-        graphics.setFont(font);
-
-        for (Widget child : inventoryWidget.getDynamicChildren()) {
-            if (child.getItemId() > 0) {
-                String idText = String.valueOf(child.getItemId());
-                net.runelite.api.Point canvasLocation = child.getCanvasLocation();
-
-                if (canvasLocation != null && canvasLocation.getX() != -1 && canvasLocation.getY() != -1) {
-                    OverlayUtil.renderTextLocation(graphics, canvasLocation, idText, Color.WHITE);
-                }
-            }
+    private void renderObjectId(Graphics2D graphics, TileObject object)
+    {
+        net.runelite.api.Point textLocation = object.getCanvasLocation();
+        if (textLocation != null)
+        {
+            String text = String.valueOf(object.getId());
+            OverlayUtil.renderTextLocation(graphics, textLocation, text, Color.WHITE);
         }
     }
 
-    private void renderGameObjects(Graphics2D graphics) {
-        int playerPlane = client.getPlane();
-        int fontSize = config.fontSize();
-        String fontStyleString = config.fontStyle();
-        String fontType = config.fontType();
-
-        int fontStyle;
-        switch (fontStyleString.toUpperCase()) {
-            case "BOLD":
-                fontStyle = Font.BOLD;
-                break;
-            case "ITALIC":
-                fontStyle = Font.ITALIC;
-                break;
-            case "PLAIN":
-            default:
-                fontStyle = Font.PLAIN;
-                break;
-        }
-
-        Font font = new Font(fontType, fontStyle, fontSize);
-        graphics.setFont(font);
-
-        for (Tile[][] planeTiles : client.getScene().getTiles()) {
-            if (planeTiles == null) continue;
-
-            for (Tile[] rowTiles : planeTiles) {
-                if (rowTiles == null) continue;
-
-                for (Tile tile : rowTiles) {
-                    if (tile == null) continue;
-
-                    for (GameObject gameObject : tile.getGameObjects()) {
-                        if (gameObject == null) continue;
-
-                        if (gameObject.getWorldLocation().getPlane() != playerPlane) {
-                            continue;
-                        }
-
-                        String idText = String.valueOf(gameObject.getId());
-                        WorldPoint worldLocation = gameObject.getWorldLocation();
-                        LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
-
-                        if (localPoint != null) {
-                            Point canvasLocation = Perspective.localToCanvas(client, localPoint, client.getPlane());
-                            if (canvasLocation != null) {
-                                OverlayUtil.renderTextLocation(graphics, new net.runelite.api.Point(canvasLocation.getX(), canvasLocation.getY()), idText, Color.WHITE);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void renderTileLocations(Graphics2D graphics) {
-        int playerPlane = client.getPlane();
-        int fontSize = config.fontSize();
-        String fontStyleString = config.fontStyle();
-        String fontType = config.fontType();
-
-        int fontStyle;
-        switch (fontStyleString.toUpperCase()) {
-            case "BOLD":
-                fontStyle = Font.BOLD;
-                break;
-            case "ITALIC":
-                fontStyle = Font.ITALIC;
-                break;
-            case "PLAIN":
-            default:
-                fontStyle = Font.PLAIN;
-                break;
-        }
-
-        Font font = new Font(fontType, fontStyle, fontSize);
-        graphics.setFont(font);
-
-        for (Tile[][] planeTiles : client.getScene().getTiles()) {
-            if (planeTiles == null) continue;
-
-            for (Tile[] rowTiles : planeTiles) {
-                if (rowTiles == null) continue;
-
-                for (Tile tile : rowTiles) {
-                    if (tile == null) continue;
-
-                    if (config.showTileLocations() == TileDisplayOption.CURRENT_PLANE && tile.getPlane() != playerPlane) {
-                        continue;
-                    }
-
-                    WorldPoint worldLocation = tile.getWorldLocation();
-                    LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
-
-                    if (localPoint != null) {
-                        Point canvasLocation = Perspective.localToCanvas(client, localPoint, client.getPlane());
-                        if (canvasLocation != null) {
-                            String locationText = worldLocation.getX() + ", " + worldLocation.getY();
-                            OverlayUtil.renderTextLocation(graphics, new net.runelite.api.Point(canvasLocation.getX(), canvasLocation.getY()), locationText, Color.YELLOW);
-                        }
-                    }
-                }
+    private void renderTileLocation(Graphics2D graphics, Tile tile)
+    {
+        WorldPoint worldPoint = tile.getWorldLocation();
+        LocalPoint localPoint = LocalPoint.fromWorld(client, worldPoint);
+        if (localPoint != null)
+        {
+            net.runelite.api.Point canvasPoint = Perspective.localToCanvas(client, localPoint, client.getPlane());
+            if (canvasPoint != null)
+            {
+                String text = String.format("%d, %d, %d", worldPoint.getX(), worldPoint.getY(), worldPoint.getPlane());
+                OverlayUtil.renderTextLocation(graphics, canvasPoint, text, Color.WHITE);
             }
         }
     }
