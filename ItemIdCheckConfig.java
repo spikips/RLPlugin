@@ -46,4 +46,19 @@ public interface ItemIdCheckConfig extends Config
     {
         return false;
     }
+
+    default int textSize()
+    {
+        return 10;
+    }
+
+    default String textFont()
+    {
+        return "Arial";
+    }
+
+    default boolean textBold()
+    {
+        return true;
+    }
 }

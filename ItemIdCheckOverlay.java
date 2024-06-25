@@ -1,6 +1,10 @@
 package net.runelite.client.plugins.itemidcheck;
 
-import net.runelite.api.*;
+import net.runelite.api.Client;
+import net.runelite.api.GameObject;
+import net.runelite.api.Point;
+import net.runelite.api.Tile;
+import net.runelite.api.TileObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.widgets.Widget;
@@ -34,15 +38,18 @@ public class ItemIdCheckOverlay extends Overlay
     {
         if (config.showInventoryIds())
         {
-            Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY.getGroupId(), WidgetInfo.INVENTORY.getChildId());
+            Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
             if (inventoryWidget != null)
             {
                 List<WidgetItem> inventoryItems = inventoryWidget.getWidgetItems();
                 for (WidgetItem item : inventoryItems)
                 {
                     String text = String.valueOf(item.getId());
-                    net.runelite.api.Point location = item.getCanvasLocation();
-                    OverlayUtil.renderTextLocation(graphics, location, text, Color.WHITE);
+                    Point location = item.getCanvasLocation();
+                    if (location != null)
+                    {
+                        renderText(graphics, new Point(location.getX(), location.getY()), text);
+                    }
                 }
             }
         }
@@ -51,11 +58,11 @@ public class ItemIdCheckOverlay extends Overlay
         {
             Tile[][][] tiles = client.getScene().getTiles();
             int plane = client.getPlane();
-            for (Tile[] tileArray : tiles[plane])
+            for (Tile[] tileRow : tiles[plane])
             {
-                if (tileArray == null) continue;
+                if (tileRow == null) continue;
 
-                for (Tile tile : tileArray)
+                for (Tile tile : tileRow)
                 {
                     if (tile == null) continue;
 
@@ -67,22 +74,19 @@ public class ItemIdCheckOverlay extends Overlay
                         }
                     }
 
-                    WallObject wallObject = tile.getWallObject();
-                    if (wallObject != null)
+                    if (tile.getWallObject() != null)
                     {
-                        renderObjectId(graphics, wallObject);
+                        renderObjectId(graphics, tile.getWallObject());
                     }
 
-                    DecorativeObject decoObject = tile.getDecorativeObject();
-                    if (decoObject != null)
+                    if (tile.getDecorativeObject() != null)
                     {
-                        renderObjectId(graphics, decoObject);
+                        renderObjectId(graphics, tile.getDecorativeObject());
                     }
 
-                    GroundObject groundObject = tile.getGroundObject();
-                    if (groundObject != null)
+                    if (tile.getGroundObject() != null)
                     {
-                        renderObjectId(graphics, groundObject);
+                        renderObjectId(graphics, tile.getGroundObject());
                     }
                 }
             }
@@ -98,11 +102,11 @@ public class ItemIdCheckOverlay extends Overlay
                     continue;
                 }
 
-                for (Tile[] tileArray : tiles[p])
+                for (Tile[] tileRow : tiles[p])
                 {
-                    if (tileArray == null) continue;
+                    if (tileRow == null) continue;
 
-                    for (Tile tile : tileArray)
+                    for (Tile tile : tileRow)
                     {
                         if (tile != null)
                         {
@@ -118,11 +122,11 @@ public class ItemIdCheckOverlay extends Overlay
 
     private void renderObjectId(Graphics2D graphics, TileObject object)
     {
-        net.runelite.api.Point textLocation = object.getCanvasLocation();
+        Point textLocation = object.getCanvasLocation();
         if (textLocation != null)
         {
             String text = String.valueOf(object.getId());
-            OverlayUtil.renderTextLocation(graphics, textLocation, text, Color.WHITE);
+            renderText(graphics, textLocation, text);
         }
     }
 
@@ -132,12 +136,23 @@ public class ItemIdCheckOverlay extends Overlay
         LocalPoint localPoint = LocalPoint.fromWorld(client, worldPoint);
         if (localPoint != null)
         {
-            net.runelite.api.Point canvasPoint = Perspective.localToCanvas(client, localPoint, client.getPlane());
+            Point canvasPoint = client.getCanvasLocation(localPoint, client.getPlane());
             if (canvasPoint != null)
             {
                 String text = String.format("%d, %d, %d", worldPoint.getX(), worldPoint.getY(), worldPoint.getPlane());
-                OverlayUtil.renderTextLocation(graphics, canvasPoint, text, Color.WHITE);
+                renderText(graphics, canvasPoint, text);
             }
         }
+    }
+
+    private void renderText(Graphics2D graphics, Point point, String text)
+    {
+        int fontSize = config.textSize();
+        String fontName = config.textFont();
+        boolean isBold = config.textBold();
+        Font font = new Font(fontName, isBold ? Font.BOLD : Font.PLAIN, fontSize);
+        graphics.setFont(font);
+        graphics.setColor(Color.WHITE);
+        graphics.drawString(text, point.getX(), point.getY());
     }
 }
